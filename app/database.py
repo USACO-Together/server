@@ -105,16 +105,14 @@ class Database:
         """Handles the opening and closing of the database connection pool"""
         # Initialize the database
         self.pool = await asyncpg.create_pool(**app.settings["database"])
-        assert self.pool is not None
         with open("setup.sql", "r") as f:
             setup = f.read()
         await self.execute(setup)
         task = asyncio.create_task(self.invalidate_tokens())
         yield
         # Close the pool
-        print("Stopping...")
         task.cancel()
-        await self.pool.close()
+        await self.pool.close() # type: ignore
 
     async def signup(self, username: str, password: str, *, conn: OptConn = None) -> str:
         """Register a user into the database and return the token generated"""
