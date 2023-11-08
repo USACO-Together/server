@@ -1,0 +1,8 @@
+{
+    "database": {
+        
+    },
+    "uvicorn": {
+        "port": 5000
+    }
+}
