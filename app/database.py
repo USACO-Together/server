@@ -28,6 +28,7 @@ import traceback as tb
 from asyncpg.exceptions import InvalidAuthorizationSpecificationError, PostgresConnectionError
 from contextlib import asynccontextmanager
 from datetime import date, datetime
+from sys import stderr
 from typing import TYPE_CHECKING, Literal, TypeAlias
 from uuid import UUID
 from .errors import *
@@ -64,7 +65,7 @@ class Database:
         except (InvalidAuthorizationSpecificationError, PostgresConnectionError) as err:
             await self.release(conn)
             asyncio.get_running_loop().close()
-            print("".join(tb.format_exception(err.__class__, err, err.__traceback__)))
+            tb.print_exception(type(err), err, err.__traceback__, file=stderr)
             exit(100)
         if acquired:
             await self.release(conn)
