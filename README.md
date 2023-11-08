@@ -1,4 +1,4 @@
-# USACO-Together : Server
+# USACO Together : Server
 The webserver which provides an API for the extension to interact with the database
 
 The API is built with FastAPI and uses a PostgreSQL database.
