@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "server"
+version = "0.1"
+description = "The accompanying server for the USACO Together extension"
+authors = ["SYCKGit <oviyangandhi@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+asyncpg = "^0.28.0"
+fastapi = {extras = ["all"], version = "^0.103.2"}
+asyncpg-stubs = "^0.28.0"
+limits = "^3.6.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
