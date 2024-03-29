@@ -37,22 +37,23 @@ if TYPE_CHECKING:
     from .api import USACOAPI
     from .types import ModuleList, ProblemList
 
-ConnCtxMgr: TypeAlias = asyncpg.pool.PoolConnectionProxy | asyncpg.Connection
+ConnCtxMgr: TypeAlias = asyncpg.pool.PoolConnectionProxy
 OptConn: TypeAlias = ConnCtxMgr | None
 
 
 class Database:
+    pool: asyncpg.Pool
+
     def __init__(self, app: USACOAPI):
-        self.pool: asyncpg.Pool | None = None
         app.router.lifespan_context = self.lifespan
 
     def acquire(self) -> asyncpg.pool.PoolAcquireContext:
         """Shorthand for .pool.acquire()"""
-        return self.pool.acquire() # type: ignore
+        return self.pool.acquire()
 
     async def release(self, conn: ConnCtxMgr):
         """Shorthand for .pool.release()"""
-        await self.pool.release(conn) # type: ignore
+        await self.pool.release(conn)
 
     async def perform(self, attr: str, *args, conn: OptConn = None, **kwargs):
         acquired = False
@@ -104,7 +105,7 @@ class Database:
     async def lifespan(self, app: USACOAPI):
         """Handles the opening and closing of the database connection pool"""
         # Initialize the database
-        self.pool = await asyncpg.create_pool(**app.settings["database"])
+        self.pool = await asyncpg.create_pool(**app.settings["database"]) # type: ignore
         with open("setup.sql", "r") as f:
             setup = f.read()
         await self.execute(setup)
@@ -112,7 +113,7 @@ class Database:
         yield
         # Close the pool
         task.cancel()
-        await self.pool.close() # type: ignore
+        await self.pool.close()
 
     async def signup(self, username: str, password: str, *, conn: OptConn = None) -> str:
         """Register a user into the database and return the token generated"""
@@ -303,7 +304,7 @@ class Database:
             await self.release(conn)
             raise exc from None
         ret: dict[str, dict] = {}
-        for tname in ["problems", "modules"]:
+        for tname in ("problems", "modules"):
             ret[tname] = await self.get_progress(tname, to_follow, conn=conn) # type: ignore
         if acquired:
             await self.release(conn)
