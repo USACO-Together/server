@@ -74,7 +74,10 @@ def success(**data):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def resolve_username(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
-    username = app.db.get_username(UUID(token))
+    try:
+        username = app.db.get_username(UUID(token))
+    except ValueError:
+        username = None
     if not username:
         raise APIException(status.HTTP_401_UNAUTHORIZED, [{
             "code": "INVALID_TOKEN",
