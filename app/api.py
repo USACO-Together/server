@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from os import environ
 from typing import Annotated
+from uuid import UUID
 from .errors import *
 from .types import *
 from .database import Database
@@ -72,8 +73,8 @@ def success(**data):
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-async def resolve_username(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
-    username = await app.db.get_username(token)
+def resolve_username(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
+    username = app.db.get_username(UUID(token))
     if not username:
         raise APIException(status.HTTP_401_UNAUTHORIZED, [{
             "code": "INVALID_TOKEN",
@@ -83,20 +84,20 @@ async def resolve_username(token: Annotated[str, Depends(oauth2_scheme)]) -> str
 
 # User Management
 
-async def verify_credentials(user: User | OptionalUser):
+def verify_credentials(user: User | OptionalUser):
     errors: list[dict] = []
     if user.name is not None:
-        if (len(user.name) < 2):
+        if len(user.name) < 2:
             errors.append({
                 "code": "SHORT_USERNAME",
                 "description": "The username should be at least 2 characters long"
             })
-        elif (len(user.name) > 32):
+        elif len(user.name) > 32:
             errors.append({
                 "code": "LONG_USERNAME",
                 "description": "The username should be at most 32 characters long"
             })
-        elif (await app.db.user_exists(user.name)):
+        elif app.db.user_exists(user.name):
             errors.append({
                 "code": "USERNAME_TAKEN",
                 "description": "User with the same name already exists"
@@ -120,8 +121,14 @@ async def verify_credentials(user: User | OptionalUser):
 @app.limit("3/day")
 async def signup(user: Annotated[User, Depends(verify_credentials)], request: Request):
     """Signs up a new user for the service"""
-    token = await app.db.signup(user.name, user.password)
-    return success(token=token)
+    try:
+        token = await app.db.signup(user.name, user.password)
+        return success(token=token)
+    except DuplicateError:
+        raise APIException(status.HTTP_409_CONFLICT, [{
+            "code": "USERNAME_TAKEN",
+            "description": "The username is already taken."
+        }])
 
 @app.patch("/users")
 @app.limit("5/hour")
@@ -169,13 +176,18 @@ async def user_data(username: Annotated[str, Depends(resolve_username)], request
         follows = await app.db.get_follows(username, conn=conn)
         progress = {}
         for tname in ["problems", "modules"]:
-            progress[tname] = await app.db.get_progress(tname, username, conn=conn)
+            progress[tname] = await app.db.get_progress(username, tname, conn=conn)
         follow_data = await app.db.get_follower_progress(username, conn=conn)
         follow_data["following"] = follows
     return success(
         userData=dict(username=username, progress=progress),
         followData=follow_data
     )
+
+@app.get("/autocomplete")
+@app.limit("1 / second")
+async def autocomplete(username: Annotated[str, Depends(resolve_username)], name: str, request: Request):
+    return success(users=app.db.autocomplete(name))
 
 # Update Progress
 
