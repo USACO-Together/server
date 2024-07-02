@@ -46,7 +46,7 @@ class USACOAPI(FastAPI):
         self.limiter = RateLimiter("5 / 2 seconds")
         self.add_middleware(
             CORSMiddleware,
-            allow_origins=["chrome-extension://jmlpdjciabnplpimhafibghkcpjckblh", "https://usaco.guide"],
+            allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["GET", "POST", "PATCH", "DELETE"],
             allow_headers=["*"],
